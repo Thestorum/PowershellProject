@@ -11,7 +11,6 @@ function Install-VirtualEnvironment {
     begin {
 
         #region Preparation
-
             $vmServerNames = "Server1","Server2","Router","Member"
             $vmClientNames = "Klient1","Klient2"
             $vmNames = $vmServerNames + $vmClientNames

@@ -1,9 +1,11 @@
 function Install-VirtualEnvironment {
     [CmdletBinding()]
     param (
-        $installPath='C:\Hyper-V\',
+        [ValidateNotNullOrEmpty()]
+        $InstallPath='C:\Hyper-V\',
+        [ValidateNotNullOrEmpty()]
         $vhdxSourcePath='C:\Hyper-v skabeloner\',
-        [bool]$startVMs=$true
+        [bool]$StartVMs=$true
     )
     
     begin {
@@ -13,26 +15,30 @@ function Install-VirtualEnvironment {
             $vmServerNames = "Server1","Server2","Router","Member"
             $vmClientNames = "Klient1","Klient2"
             $vmNames = $vmServerNames + $vmClientNames
+            Write-Verbose "Preparing VM Setup"
 
 
-
-            # Creating Virtual Switches
-                New-VMSwitch -Name Domain1 -SwitchType Private
-                New-VMSwitch -Name Domain2 -SwitchType Private
-                New-VMSwitch -Name External -NetAdapterName Ethernet
+            
                 
         #endregion
+    }
+    process{
 
-
-        #region Configure VM's
+        try {
+            #region Configure VM's
             
+            # Creating Virtual Switches
+            New-VMSwitch -Name Domain1 -SwitchType Private
+            New-VMSwitch -Name Domain2 -SwitchType Private
+            New-VMSwitch -Name External -NetAdapterName Ethernet
+
             # Setting up every VM
             foreach ($name in $vmNames) {
                 # Creating directory
-                New-Item -Path $installPath -ItemType Directory -Name $name -Force
+                New-Item -Path $InstallPath -ItemType Directory -Name $name -Force
 
-                $tempVHDXPath = ($installPath + $name + "\" + $name + ".vhdx")
-                $tempVMPath = $installPath + $name
+                $tempVHDXPath = ($InstallPath + $name + "\" + $name + ".vhdx")
+                $tempVMPath = $InstallPath + $name
 
                 if ($vmServerNames.Contains($name)) { # If Server
                     New-VHD -Differencing -ParentPath ($vhdxSourcePath + 'Server2019Temp.vhdx') -Path $tempVHDXPath
@@ -70,13 +76,28 @@ function Install-VirtualEnvironment {
                 Add-VMNetworkAdapter -VMName 'Klient 2' -SwitchName Domain2 -Name Privatnet
                 Remove-VMNetworkAdapter -VMName 'Klient 2' -Name 'Network Adapter'
 
-            # If parameter $startVMs is set to true
-            if ($startVMs = $true) {
-                Get-VM | Start-VM
-                Write-Verbose "Starting VM's"
-            }
+            
 
         #endregion
         
+        }
+        catch {
+            Write-Error $_
+        }
+        
+    }
+    end{
+
+        if ($LASTEXITCODE = 0) {
+            Write-Verbose "VM's Successfully Configured"
+            # If parameter $startVMs is set to true
+            if ($startVMs = $true) {
+            Get-VM | Start-VM
+            Write-Verbose "Starting VM's"
+            }
+        }else {
+            Write-Error $LASTEXITCODE
+        }
+
     }
 }

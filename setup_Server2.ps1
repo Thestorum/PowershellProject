@@ -34,3 +34,8 @@ $pass = ConvertTo-SecureString 'P@ssw0rd' -AsPlainText -Force
 New-ADUser -Name Klient_User2 -DisplayName Klient_User2 -SamAccountName KLU2 -AccountPassword $pass -Enabled:$true -PasswordNeverExpires:$true
 
 #endregion
+
+#region DNS
+#Tilføj conditional forwarder fra domain2 til domain1
+Add-DnsServerConditionalForwarderZone -Name Domain1.local -MasterServers 10.0.1.10
+#endregion

@@ -39,3 +39,4 @@ New-ADUser -Name Klient_User2 -DisplayName Klient_User2 -SamAccountName KLU2 -Ac
 #Tilføj conditional forwarder fra domain2 til domain1
 Add-DnsServerConditionalForwarderZone -Name Domain1.local -MasterServers 10.0.1.10
 #endregion
+

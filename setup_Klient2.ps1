@@ -14,3 +14,7 @@ Disable-NetAdapterBinding -InterfaceAlias "Ethernet 2" -ComponentID ms_tcpip6
 Add-Computer -domainname Domain2.local -Credential $cred -NewName Klient2 -Restart
 
 #endregion
+
+#region PS REMOTE
+Enable-PSRemoting -Force
+#endregion

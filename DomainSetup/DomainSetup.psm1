@@ -16,9 +16,6 @@ function Install-VirtualEnvironment {
             $vmClientNames = "Klient1","Klient2"
             $vmNames = $vmServerNames + $vmClientNames
             Write-Verbose "Preparing VM Setup"
-
-
-            
                 
         #endregion
     }

@@ -30,10 +30,6 @@ Install-ADDSForest -SafeModeAdministratorPassword $Pass `
 
 #############################################################################
 
-$pass = ConvertTo-SecureString 'P@ssw0rd' -AsPlainText -Force
-New-ADUser -Name Klient_User1 -DisplayName Klient_User1 -SamAccountName KLU1 -AccountPassword $pass -Enabled:$true -PasswordNeverExpires:$true
-#
-
 #endregion
 
 #region DNS

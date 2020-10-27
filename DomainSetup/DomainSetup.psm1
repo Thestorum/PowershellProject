@@ -37,9 +37,9 @@ function Install-VirtualEnvironment {
                 $tempVMPath = $InstallPath + $name
 
                 if ($vmServerNames.Contains($name)) { # If Server
-                    New-VHD -Differencing -ParentPath ($vhdxSourcePath + 'Server2019Temp.vhdx') -Path $tempVHDXPath
+                    New-VHD -Differencing -ParentPath ($vhdxSourcePath + 'Server2016GUITemp_Unattended.vhdx') -Path $tempVHDXPath
                 }elseif ($vmClientNames.Contains($name)) { # If Client
-                    New-VHD -Differencing -ParentPath ($vhdxSourcePath + 'Win10Temp.vhdx') -Path ($installPath + $name + "\" + $name + ".vhdx")
+                    New-VHD -Differencing -ParentPath ($vhdxSourcePath + 'Win10Temp_Unattended.vhdx') -Path ($installPath + $name + "\" + $name + ".vhdx")
                 }
                 
                 New-VM -Name $name -MemoryStartupBytes 2048MB -VHDPath $tempVHDXPath -Path $tempVMPath -Generation 1

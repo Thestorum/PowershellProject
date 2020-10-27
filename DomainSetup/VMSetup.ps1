@@ -26,17 +26,17 @@ function Install-VMRoles {
             #region: Server1
             $vmName = "Server1"
             while ((Invoke-Command -VMName $vmName -Credential $credServer -ScriptBlock{"Test"} -ErrorAction SilentlyContinue) -ne "Test") {
-                Start-Sleep -Seconds 2
+                Start-Sleep -Seconds 10
                 Write-Output "$vmName is currently booting"
             }
-            Invoke-Command -VMName $vmName -Credential $credServer -ScriptBlock {
+            Invoke-Command -VMName $vmName -Credential $credServer -ArgumentList $vmName -ScriptBlock {
                 # IP Configuration
                 New-NetIPAddress -IPAddress 10.0.1.10 -InterfaceAlias "Ethernet" -DefaultGateway 10.0.1.1 -PrefixLength 24 | Out-Null
                 Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses 127.0.0.1 | Out-Null
                 Disable-NetAdapterBinding -InterfaceAlias "Ethernet" -ComponentID ms_tcpip6 | Out-Null
                 
                 # Rename PC
-                Rename-Computer -NewName $vmName -Force -Restart
+                Rename-Computer -NewName $args[0] -Force -Restart
             }
 
             while ((Invoke-Command -VMName $vmName -Credential $credServer -ScriptBlock{"Test"} -ErrorAction SilentlyContinue) -ne "Test") {
@@ -72,18 +72,18 @@ function Install-VMRoles {
             #region: Klient1
 
             $vmName = "Klient1"
-            while ((Invoke-Command -VMName $vmName -Credential $credClient -ScriptBlock{"Test"} -ErrorAction SilentlyContinue) -ne "Test") {
+            while ((Invoke-Command -VMName $vmName -Credential $credClient -ScriptBlock{"Test"} -ErrorAction SilentlyContinue) -ne "Test"){
                 Start-Sleep -Seconds 2
                 Write-Output "$vmName is rebooting"
             }
-            Invoke-Command -VMName $vmName -Credential $credClient -ScriptBlock {
+            Invoke-Command -VMName $vmName -Credential $credClient -ArgumentList $credDomain1 -ScriptBlock {
                 # IP Configuration
                 New-NetIPAddress -IPAddress 10.0.1.11 -InterfaceAlias "Ethernet" -DefaultGateway 10.0.1.1 -PrefixLength 24 | Out-Null
                 Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses 10.0.1.10 | Out-Null
                 Disable-NetAdapterBinding -InterfaceAlias "Ethernet" -ComponentID ms_tcpip6 | Out-Null
                 
                 # Rename and Join PC to Domain
-                Add-Computer -domainname Domain1.local -Credential $credDomain1 -NewName Klient1 -Restart
+                Add-Computer -domainname Domain1.local -Credential $args[0] -NewName Klient1 -Restart
             }
             
             #endregion

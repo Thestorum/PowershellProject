@@ -2,9 +2,9 @@ function Install-VirtualEnvironment {
     [CmdletBinding()]
     param (
         [ValidateNotNullOrEmpty()]
-        $InstallPath='C:\Hyper-V\',
+        $InstallPath='D:\Hyper-V\',
         [ValidateNotNullOrEmpty()]
-        $vhdxSourcePath='C:\Hyper-v skabeloner\',
+        $vhdxSourcePath='D:\Hyper-v skabeloner\',
         [bool]$StartVMs=$true
     )
     
@@ -47,12 +47,12 @@ function Install-VirtualEnvironment {
 
             # Assigning Network Adapters
                 # Server 1
-                Add-VMNetworkAdapter -VMName 'Server 1' -SwitchName Domain1 -Name Privat
-                Remove-VMNetworkAdapter -VMName 'Server 1' -Name 'Network Adapter'
+                Add-VMNetworkAdapter -VMName 'Server1' -SwitchName Domain1 -Name Privat
+                Remove-VMNetworkAdapter -VMName 'Server1' -Name 'Network Adapter'
 
                 # Server 2
-                Add-VMNetworkAdapter -VMName 'Server 2' -SwitchName Domain2 -Name Privat
-                Remove-VMNetworkAdapter -VMName 'Server 2' -Name 'Network Adapter'
+                Add-VMNetworkAdapter -VMName 'Server2' -SwitchName Domain2 -Name Privat
+                Remove-VMNetworkAdapter -VMName 'Server2' -Name 'Network Adapter'
 
                 # Member
                 Add-VMNetworkAdapter -VMName 'Member' -SwitchName Domain1 -Name Privat
@@ -65,12 +65,12 @@ function Install-VirtualEnvironment {
                 Remove-VMNetworkAdapter -VMName 'Router' -Name 'Network Adapter'
 
                 # Klient 1
-                Add-VMNetworkAdapter -VMName 'Klient 1' -SwitchName Domain1 -Name Privatnet
-                Remove-VMNetworkAdapter -VMName 'Klient 1' -Name 'Network Adapter'
+                Add-VMNetworkAdapter -VMName 'Klient1' -SwitchName Domain1 -Name Privatnet
+                Remove-VMNetworkAdapter -VMName 'Klient1' -Name 'Network Adapter'
 
                 # Klient 2
-                Add-VMNetworkAdapter -VMName 'Klient 2' -SwitchName Domain2 -Name Privatnet
-                Remove-VMNetworkAdapter -VMName 'Klient 2' -Name 'Network Adapter'
+                Add-VMNetworkAdapter -VMName 'Klient2' -SwitchName Domain2 -Name Privatnet
+                Remove-VMNetworkAdapter -VMName 'Klient2' -Name 'Network Adapter'
 
             
 
@@ -84,15 +84,12 @@ function Install-VirtualEnvironment {
     }
     end{
 
-        if ($LASTEXITCODE = 0) {
-            Write-Verbose "VM's Successfully Configured"
-            # If parameter $startVMs is set to true
-            if ($startVMs = $true) {
-            Get-VM | Start-VM
-            Write-Verbose "Starting VM's"
-            }
-        }else {
-            Write-Error $LASTEXITCODE
+        
+        Write-Verbose "VM's Successfully Configured"
+        # If parameter $startVMs is set to true
+        if ($startVMs = $true) {
+        Get-VM | Start-VM
+        Write-Verbose "Starting VM's"
         }
 
     }

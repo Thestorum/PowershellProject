@@ -14,7 +14,6 @@ Install-RemoteAccess -VpnType Vpn
 
 $intdom1 = "Ethernet 3"
 $intdom2 = "Ethernet"
-$intext = "Ethernet 2"
 
 
 

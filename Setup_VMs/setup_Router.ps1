@@ -12,8 +12,8 @@ Install-RemoteAccess -VpnType Vpn
 
 ########### UDFYLD HVILKEN ADAPTER DER GÅR TIL HVAD NEDENFOR ################
 
-$intdom1 = "Ethernet 3"
-$intdom2 = "Ethernet"
+$intdom1 = "Ethernet"
+$intdom2 = "Ethernet 3"
 
 
 

@@ -11,7 +11,7 @@ New-ADOrganizationalUnit -Name "IT" -Path "OU=Company,DC=Domain1,DC=local"
 New-ADOrganizationalUnit -Name "Produktion" -Path "OU=Company,DC=Domain1,DC=local"
 
 #Oprettelse af brugere samt simpel info
-New-ADUser -Name "Peter Produktion" -UserPrincipalName "pp@domain1.local" -DisplayName "PP" -EmailAddress "PP@Domain1.local" -ChangePasswordAtLogon 1 `
+New-ADUser -Name "Peter Produktion" -SamAccountName "PP" -UserPrincipalName "pp@domain1.local" -DisplayName "Peter Produktion" -EmailAddress "PP@Domain1.local" -ChangePasswordAtLogon 1 `
 -Initials "PP" -Path "OU=Produktion,OU=Company,DC=domain1,DC=local" -AccountPassword (ConvertTo-SecureString "Start2020" -AsPlainText -Force) -enabled 1
 
 New-ADUser -Name "Iben IT" -UserPrincipalName "II@domain1.local" -DisplayName "II" -EmailAddress "II@Domain1.local" -ChangePasswordAtLogon 1 `

@@ -18,6 +18,7 @@ function Install-VMRoles {
         $credDomain1 = New-Object System.Management.Automation.PSCredential (“Domain1\Administrator”, $pass)
         $credDomain2 = New-Object System.Management.Automation.PSCredential (“Domain2\Administrator”, $pass)
 
+        Write-Verbose "Credentials Defined"
     }
     
     process {
@@ -25,6 +26,7 @@ function Install-VMRoles {
 
             #region: Server1
             $vmName = "Server1"
+            Write-Verbose "Starting configuration of $vmName"
             while ((Invoke-Command -VMName $vmName -Credential $credServer -ScriptBlock{"Test"} -ErrorAction SilentlyContinue) -ne "Test") {
                 Start-Sleep -Seconds 10
                 Write-Output "$vmName is currently booting"

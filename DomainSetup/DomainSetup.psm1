@@ -443,7 +443,7 @@ function Install-ADStructure {
     $VM = (Get-VM -Name $vmName)
     Write-Verbose "Installing AD Structure"
     $pass = ConvertTo-SecureString "P@ssw0rd" -AsPlainText -Force
-    $credDomain1 = New-Object System.Management.Automation.PSCredential (“Domain1\Administrator”, $pass)
+    $credDomain1 = New-Object System.Management.Automation.PSCredential ("Domain1\Administrator", $pass)
     Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credDomain1 -ScriptBlock {
         
 

@@ -196,14 +196,14 @@ function Install-VMRoles {
         $pass = ConvertTo-SecureString "P@ssw0rd" -AsPlainText -Force
 
         # Client VM Credentials
-        $credClient = New-Object System.Management.Automation.PSCredential (“Egon”, $pass)
+        $credClient = New-Object System.Management.Automation.PSCredential ("Egon", $pass)
         
         # Server VM Credentials
-        $credServer = New-Object System.Management.Automation.PSCredential (“Administrator”, $pass)
+        $credServer = New-Object System.Management.Automation.PSCredential ("Administrator", $pass)
 
         # Domain Credentials
-        $credDomain1 = New-Object System.Management.Automation.PSCredential (“Domain1\Administrator”, $pass)
-        $credDomain2 = New-Object System.Management.Automation.PSCredential (“Domain2\Administrator”, $pass)
+        $credDomain1 = New-Object System.Management.Automation.PSCredential ("Domain1\Administrator", $pass)
+        $credDomain2 = New-Object System.Management.Automation.PSCredential ("Domain2\Administrator", $pass)
 
         Write-Verbose "Credentials Defined"
     }

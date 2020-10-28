@@ -224,16 +224,23 @@ function Install-VMRoles {
                 Install-RemoteAccess -VpnType Vpn
                 Write-Verbose "Router role installed"
                 # IP Configuration
-                $interface_ext = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000004"
-                $interface_dom1 = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000005"
-                $interface_dom2= Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000006"
-                New-NetIPAddress -IPAddress 10.0.1.1 -InterfaceAlias ($interface_dom1.InterfaceAlias) -PrefixLength 24 | Out-Null
-                Set-DnsClientServerAddress -InterfaceAlias ($interface_dom1.InterfaceAlias) -ServerAddresses 10.0.1.10 | Out-Null
-                New-NetIPAddress -IPAddress 10.0.2.1 -InterfaceAlias ($interface_dom2.InterfaceAlias) -PrefixLength 24 | Out-Null
-                Set-DnsClientServerAddress -InterfaceAlias ($interface_dom2.InterfaceAlias) -ServerAddresses 10.0.2.10 | Out-Null
+                $interface_ext = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000004" | Select-Object -Property InterfaceAlias
+                $interface_dom1 = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000005" | Select-Object -Property InterfaceAlias
+                $interface_dom2= Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000006" | Select-Object -Property InterfaceAlias
+                
+
+
+                New-NetIPAddress -IPAddress 10.0.1.1 -InterfaceAlias $interface_dom1 -PrefixLength 24 | Out-Null
+                Set-DnsClientServerAddress -InterfaceAlias $interface_dom1 -ServerAddresses 10.0.1.10 | Out-Null
+                New-NetIPAddress -IPAddress 10.0.2.1 -InterfaceAlias $interface_dom2 -PrefixLength 24 | Out-Null
+                Set-DnsClientServerAddress -InterfaceAlias $interface_dom2 -ServerAddresses 10.0.2.10 | Out-Null
         
                 cmd.exe /c "netsh routing ip nat install"
-                cmd.exe /c "netsh routing ip nat add interface "($interface_ext.InterfaceAlias)""
+                cmd.exe /c "netsh routing ip nat add interface 
+                
+                
+                
+                "
                 cmd.exe /c "netsh routing ip nat set interface "($interface_ext.InterfaceAlias)" mode=full"
                 cmd.exe /c "netsh routing ip nat add interface "($interface_dom1.InterfaceAlias)""
                 cmd.exe /c "netsh routing ip nat add interface "($interface_dom2.InterfaceAlias)""
@@ -369,6 +376,9 @@ function Install-VMRoles {
                 
             }
 
+
+
+
             #endregion
 
 
@@ -380,10 +390,12 @@ function Install-VMRoles {
             Write-Verbose "Starting configuration of $vmName"
             
             Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credClient -ArgumentList $credDomain1,$vmName -ScriptBlock {
+                $interface = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000007"
+                
                 # IP Configuration
-                New-NetIPAddress -IPAddress 10.0.1.11 -InterfaceAlias "Ethernet" -DefaultGateway 10.0.1.1 -PrefixLength 24 | Out-Null
-                Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses 10.0.1.10 | Out-Null
-                Disable-NetAdapterBinding -InterfaceAlias "Ethernet" -ComponentID ms_tcpip6 | Out-Null
+                New-NetIPAddress -IPAddress 10.0.1.11 -InterfaceAlias ($interface.InterfaceAlias) -DefaultGateway 10.0.1.1 -PrefixLength 24 | Out-Null
+                Set-DnsClientServerAddress -InterfaceAlias ($interface.InterfaceAlias) -ServerAddresses 10.0.1.10 | Out-Null
+                Disable-NetAdapterBinding -InterfaceAlias ($interface.InterfaceAlias) -ComponentID ms_tcpip6 | Out-Null
                 
                 # Rename and Join PC to Domain
                 Add-Computer -domainname Domain1.local -Credential $args[0] -NewName $args[1] -Restart
@@ -398,10 +410,12 @@ function Install-VMRoles {
             Write-Verbose "Starting configuration of $vmName"
             
             Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credClient -ArgumentList $credDomain1,$vmName -ScriptBlock {
+                $interface = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000008"
+                
                 # IP Configuration
-                New-NetIPAddress -IPAddress 10.0.2.11 -InterfaceAlias "Ethernet" -DefaultGateway 10.0.2.1 -PrefixLength 24 | Out-Null
-                Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses 10.0.2.10 | Out-Null
-                Disable-NetAdapterBinding -InterfaceAlias "Ethernet" -ComponentID ms_tcpip6 | Out-Null
+                New-NetIPAddress -IPAddress 10.0.2.11 -InterfaceAlias ($interface.InterfaceAlias) -DefaultGateway 10.0.2.1 -PrefixLength 24 | Out-Null
+                Set-DnsClientServerAddress -InterfaceAlias ($interface.InterfaceAlias) -ServerAddresses 10.0.2.10 | Out-Null
+                Disable-NetAdapterBinding -InterfaceAlias ($interface.InterfaceAlias) -ComponentID ms_tcpip6 | Out-Null
                 
                 # Rename and Join PC to Domain
                 Add-Computer -domainname domain2.local -Credential $args[0] -NewName $args[1] -Restart
@@ -417,4 +431,52 @@ function Install-VMRoles {
     end {
         
     }
+}
+
+
+function Install-ADStructure {
+    param (
+        
+    )
+
+    $vmName = "Server1"
+    $VM = (Get-VM -Name $vmName)
+    Write-Verbose "Installing AD Structure"
+    $pass = ConvertTo-SecureString "P@ssw0rd" -AsPlainText -Force
+    $credDomain1 = New-Object System.Management.Automation.PSCredential (“Domain1\Administrator”, $pass)
+    Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credDomain1 -ScriptBlock {
+        
+
+        # Create Company OU
+        New-ADOrganizationalUnit -Name "Company" -Path "DC=Domain1,DC=local"
+
+        # Create 4 different OU's
+        New-ADOrganizationalUnit -Name "Kundeservice" -Path "OU=Company,DC=Domain1,DC=local"
+
+        New-ADOrganizationalUnit -Name "Administration" -Path "OU=Company,DC=Domain1,DC=local"
+
+        New-ADOrganizationalUnit -Name "IT" -Path "OU=Company,DC=Domain1,DC=local"
+
+        New-ADOrganizationalUnit -Name "Produktion" -Path "OU=Company,DC=Domain1,DC=local"
+
+        # Basic User creation
+        New-ADUser -Name "Peter Produktion" -SamAccountName "PP" -UserPrincipalName "pp@domain1.local" -DisplayName "Peter Produktion" -EmailAddress "PP@Domain1.local" -ChangePasswordAtLogon 1 `
+        -Initials "PP" -Path "OU=Produktion,OU=Company,DC=domain1,DC=local" -AccountPassword (ConvertTo-SecureString "Start2020" -AsPlainText -Force) -enabled 1
+
+        New-ADUser -Name "Iben IT" -SamAccountName "II" -UserPrincipalName "II@domain1.local" -DisplayName "Iben IT" -EmailAddress "II@Domain1.local" -ChangePasswordAtLogon 1 `
+        -Initials "II" -Path "OU=IT,OU=Company,DC=domain1,DC=local" -AccountPassword (ConvertTo-SecureString "Start2020" -AsPlainText -Force) -enabled 1
+
+        New-ADUser -Name "Anne Administration" -SamAccountName "AA" -UserPrincipalName "AA@domain1.local" -DisplayName "Anne Administration" -EmailAddress "AA@Domain1.local" -ChangePasswordAtLogon 1 `
+        -Initials "AA" -Path "OU=Administration,OU=Company,DC=domain1,DC=local" -AccountPassword (ConvertTo-SecureString "Start2020" -AsPlainText -Force) -enabled 1
+
+        New-ADUser -Name "Kasper Kundeservice" -SamAccountName "KK" -UserPrincipalName "KK@domain1.local" -DisplayName "Kasper Kundeservice" -EmailAddress "KK@Domain1.local" -ChangePasswordAtLogon 1 `
+        -Initials "KK" -Path "OU=Kundeservice,OU=Company,DC=domain1,DC=local" -AccountPassword (ConvertTo-SecureString "Start2020" -AsPlainText -Force) -enabled 1
+    }
+
+
+
+
+
+
+
 }

@@ -112,9 +112,9 @@ function Install-VirtualEnvironment {
             #region Configure VM's
             
             # Creating Virtual Switches
-            New-VMSwitch -Name Domain1 -SwitchType Private| Out-Null
-            New-VMSwitch -Name Domain2 -SwitchType Private| Out-Null
-            New-VMSwitch -Name External -NetAdapterName Ethernet| Out-Null
+            New-VMSwitch -Name Domain1 -SwitchType Private | Out-Null
+            New-VMSwitch -Name Domain2 -SwitchType Private | Out-Null
+            New-VMSwitch -Name External -NetAdapterName Ethernet | Out-Null
 
             # Setting up every VM
             foreach ($name in $vmNames) {
@@ -135,29 +135,29 @@ function Install-VirtualEnvironment {
 
             # Assigning Network Adapters
                 # Server 1
-                Add-VMNetworkAdapter -VMName 'Server1' -SwitchName Domain1 -Name Privat | Out-Null
+                Add-VMNetworkAdapter -VMName 'Server1' -SwitchName Domain1 -Name Privat -StaticMacAddress "00155D000001" | Out-Null
                 Remove-VMNetworkAdapter -VMName 'Server1' -Name 'Network Adapter' | Out-Null
 
                 # Server 2
-                Add-VMNetworkAdapter -VMName 'Server2' -SwitchName Domain2 -Name Privat | Out-Null
+                Add-VMNetworkAdapter -VMName 'Server2' -SwitchName Domain2 -Name Privat -StaticMacAddress "00155D000002"| Out-Null
                 Remove-VMNetworkAdapter -VMName 'Server2' -Name 'Network Adapter' | Out-Null
 
                 # Member
-                Add-VMNetworkAdapter -VMName 'Member' -SwitchName Domain1 -Name Privat | Out-Null
+                Add-VMNetworkAdapter -VMName 'Member' -SwitchName Domain1 -Name Privat -StaticMacAddress "00155D000003"| Out-Null
                 Remove-VMNetworkAdapter -VMName 'Member' -Name 'Network Adapter' | Out-Null
 
                 # Router
-                Add-VMNetworkAdapter -VMName 'Router' -SwitchName External -Name Extern | Out-Null
-                Add-VMNetworkAdapter -VMName 'Router' -SwitchName Domain1 -Name Privat1 | Out-Null
-                Add-VMNetworkAdapter -VMName 'Router' -SwitchName Domain2 -Name Privat2 | Out-Null
+                Add-VMNetworkAdapter -VMName 'Router' -SwitchName External -Name Extern -StaticMacAddress "00155D000004"| Out-Null
+                Add-VMNetworkAdapter -VMName 'Router' -SwitchName Domain1 -Name Privat1 -StaticMacAddress "00155D000005"| Out-Null
+                Add-VMNetworkAdapter -VMName 'Router' -SwitchName Domain2 -Name Privat2 -StaticMacAddress "00155D000006"| Out-Null
                 Remove-VMNetworkAdapter -VMName 'Router' -Name 'Network Adapter' | Out-Null
 
                 # Klient 1
-                Add-VMNetworkAdapter -VMName 'Klient1' -SwitchName Domain1 -Name Privatnet | Out-Null
+                Add-VMNetworkAdapter -VMName 'Klient1' -SwitchName Domain1 -Name Privatnet -StaticMacAddress "00155D000007"| Out-Null
                 Remove-VMNetworkAdapter -VMName 'Klient1' -Name 'Network Adapter' | Out-Null
 
                 # Klient 2
-                Add-VMNetworkAdapter -VMName 'Klient2' -SwitchName Domain2 -Name Privatnet | Out-Null
+                Add-VMNetworkAdapter -VMName 'Klient2' -SwitchName Domain2 -Name Privatnet -StaticMacAddress "00155D000008"| Out-Null
                 Remove-VMNetworkAdapter -VMName 'Klient2' -Name 'Network Adapter' | Out-Null
 
             
@@ -176,8 +176,9 @@ function Install-VirtualEnvironment {
         Write-Verbose "VM's Successfully Configured"
         # If parameter $startVMs is set to true
         if ($startVMs = $true) {
-        Get-VM | Start-VM
-        Write-Verbose "Starting VM's"
+            Write-Verbose "Starting VM's"
+            Get-VM | Start-VM
+        
         }
 
     }
@@ -217,14 +218,15 @@ function Install-VMRoles {
 
             Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credServer -ArgumentList $vmName -ScriptBlock {
                 # IP Configuration
-                New-NetIPAddress -IPAddress 10.0.1.10 -InterfaceAlias "Ethernet" -DefaultGateway 10.0.1.1 -PrefixLength 24 | Out-Null
-                Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses 127.0.0.1 | Out-Null
-                Disable-NetAdapterBinding -InterfaceAlias "Ethernet" -ComponentID ms_tcpip6 | Out-Null
+                $interface = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000001"
+                New-NetIPAddress -IPAddress 10.0.1.10 -InterfaceAlias ($interface.InterfaceAlias) -DefaultGateway 10.0.1.1 -PrefixLength 24 | Out-Null
+                Set-DnsClientServerAddress -InterfaceAlias ($interface.InterfaceAlias) -ServerAddresses 127.0.0.1 | Out-Null
+                Disable-NetAdapterBinding -InterfaceAlias ($interface.InterfaceAlias) -ComponentID ms_tcpip6 | Out-Null
                 
                 # Rename PC
                 Rename-Computer -NewName $args[0] -Force -Restart
             }
-
+            Write-Verbose "$vmName is now rebooting"
             Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credServer -ScriptBlock {
                 $Pass = ConvertTo-SecureString "P@ssw0rd" -AsPlainText -Force
                 Install-windowsfeature AD-domain-services -IncludeManagementTools
@@ -242,14 +244,17 @@ function Install-VMRoles {
                 -SysvolPath "C:\Windows\SYSVOL" `
                 -Force:$true
             }
+            Write-Verbose "$vmName is now rebooting"
             # Resumes when domain is reachable again
             Start-Sleep -Seconds 30
-            Wait-ActiveDirectory
+            Wait-ActiveDirectory -VirtualMachine $VM -Credential $credDomain1
 
             Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credDomain1 -ScriptBlock {
                 # Adds Conditional Forwarder for domain2
                 Add-DnsServerConditionalForwarderZone -Name Domain2.local -MasterServers 10.0.2.10
             }
+
+
             $vmName = $null
             $VM = $null
             #endregion
@@ -261,14 +266,15 @@ function Install-VMRoles {
 
             Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credServer -ArgumentList $vmName -ScriptBlock {
                 # IP Configuration
-                New-NetIPAddress -IPAddress 10.0.2.10 -InterfaceAlias "Ethernet" -DefaultGateway 10.0.2.1 -PrefixLength 24 | Out-Null
-                Set-DnsClientServerAddress -InterfaceAlias "Ethernet" -ServerAddresses 127.0.0.1 | Out-Null
-                Disable-NetAdapterBinding -InterfaceAlias "Ethernet" -ComponentID ms_tcpip6 | Out-Null
+                $interface = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000002"
+                New-NetIPAddress -IPAddress 10.0.2.10 -InterfaceAlias ($interface.InterfaceAlias) -DefaultGateway 10.0.2.1 -PrefixLength 24 | Out-Null
+                Set-DnsClientServerAddress -InterfaceAlias ($interface.InterfaceAlias) -ServerAddresses 127.0.0.1 | Out-Null
+                Disable-NetAdapterBinding -InterfaceAlias ($interface.InterfaceAlias) -ComponentID ms_tcpip6 | Out-Null
                 
                 # Rename PC
                 Rename-Computer -NewName $args[0] -Force -Restart
             }
-
+            Write-Verbose "$vmName is now rebooting"
             Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credServer -ScriptBlock {
                 $Pass = ConvertTo-SecureString "P@ssw0rd" -AsPlainText -Force
                 Install-windowsfeature AD-domain-services -IncludeManagementTools
@@ -286,16 +292,84 @@ function Install-VMRoles {
                 -SysvolPath "C:\Windows\SYSVOL" `
                 -Force:$true
             }
+            Write-Verbose "$vmName is now rebooting"
             # Resumes when domain is reachable again
             Start-Sleep -Seconds 30
             Wait-ActiveDirectory
 
             Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credDomain2 -ScriptBlock {
                 # Adds Conditional Forwarder for domain2
-                Add-DnsServerConditionalForwarderZone -Name Domain2.local -MasterServers 10.0.1.10
+                Add-DnsServerConditionalForwarderZone -Name Domain1.local -MasterServers 10.0.1.10
             }
             $vmName = $null
             $VM = $null
+            #endregion
+
+
+
+            #region Member
+            $vmName = "Member"
+            $VM = (Get-VM -Name $vmName)
+            Write-Verbose "Starting configuration of $vmName"
+            
+            Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credServer -ArgumentList $credDomain1,$vmName -ScriptBlock {
+                # IP Configuration
+                $interface = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000003"
+                New-NetIPAddress -IPAddress 10.0.1.20 -InterfaceAlias ($interface.InterfaceAlias) -DefaultGateway 10.0.1.1 -PrefixLength 24 | Out-Null
+                Set-DnsClientServerAddress -InterfaceAlias ($interface.InterfaceAlias) -ServerAddresses 10.0.1.10 | Out-Null
+                Disable-NetAdapterBinding -InterfaceAlias ($interface.InterfaceAlias) -ComponentID ms_tcpip6 | Out-Null
+                
+                # Rename and Join PC to Domain
+                Add-Computer -domainname Domain1.local -Credential $args[0] -NewName $args[1] -Restart
+            }
+
+            Write-Verbose "$vmName is now rebooting"
+            Start-Sleep -Seconds 30
+            Wait-ActiveDirectory -VirtualMachine $VM -Credential $credDomain1
+            Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credServer -ScriptBlock {
+                
+                Add-WindowsFeature adcs-cert-authority -IncludeManagementTools
+                Install-AdcsCertificationAuthority -AllowAdministratorInteraction`
+                -CAType EnterpriseRootCa `
+                -CryptoProviderName "RSA#Microsoft Software Key Storage Provider" `
+                -KeyLength 2048 `
+                -HashAlgorithmName SHA256 `
+                -ValidityPeriod Years `
+                -ValidityPeriodUnits 3
+            }
+
+            #endregion
+
+            #region Router
+
+            $vmName = "Router"
+            $VM = (Get-VM -Name $vmName)
+            Write-Verbose "Starting configuration of $vmName"
+            
+            Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credServer -ScriptBlock {
+                
+                # Install router role
+                Install-WindowsFeature Routing -IncludeManagementTools
+                Install-RemoteAccess -VpnType Vpn
+                Write-Verbose "Router role installed"
+                # IP Configuration
+                $interface_ext = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000004"
+                $interface_dom1 = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000005"
+                $interface_dom2= Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000006"
+                New-NetIPAddress -IPAddress 10.0.1.1 -InterfaceAlias ($interface_dom1.InterfaceAlias) -PrefixLength 24 | Out-Null
+                Set-DnsClientServerAddress -InterfaceAlias ($interface_dom1.InterfaceAlias) -ServerAddresses 10.0.1.10 | Out-Null
+                New-NetIPAddress -IPAddress 10.0.2.1 -InterfaceAlias ($interface_dom2.InterfaceAlias) -PrefixLength 24 | Out-Null
+                Set-DnsClientServerAddress -InterfaceAlias ($interface_dom2.InterfaceAlias) -ServerAddresses 10.0.2.10 | Out-Null
+
+                
+                
+                
+                # Rename and Join PC to Domain
+                Add-Computer -domainname Domain1.local -Credential $args[0] -NewName $args[1] -Restart
+            }
+
+
+
             #endregion
 
             #region: Klient1

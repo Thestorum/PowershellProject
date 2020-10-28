@@ -211,6 +211,37 @@ function Install-VMRoles {
     process {
         try {
 
+            #region Router
+
+            $vmName = "Router"
+            $VM = (Get-VM -Name $vmName)
+            Write-Verbose "Starting configuration of $vmName"
+            
+            Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credServer -ScriptBlock {
+                
+                # Install router role
+                Install-WindowsFeature Routing -IncludeManagementTools
+                Install-RemoteAccess -VpnType Vpn
+                Write-Verbose "Router role installed"
+                # IP Configuration
+                $interface_ext = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000004"
+                $interface_dom1 = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000005"
+                $interface_dom2= Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000006"
+                New-NetIPAddress -IPAddress 10.0.1.1 -InterfaceAlias ($interface_dom1.InterfaceAlias) -PrefixLength 24 | Out-Null
+                Set-DnsClientServerAddress -InterfaceAlias ($interface_dom1.InterfaceAlias) -ServerAddresses 10.0.1.10 | Out-Null
+                New-NetIPAddress -IPAddress 10.0.2.1 -InterfaceAlias ($interface_dom2.InterfaceAlias) -PrefixLength 24 | Out-Null
+                Set-DnsClientServerAddress -InterfaceAlias ($interface_dom2.InterfaceAlias) -ServerAddresses 10.0.2.10 | Out-Null
+        
+                cmd.exe /c "netsh routing ip nat install"
+                cmd.exe /c "netsh routing ip nat add interface "($interface_ext.InterfaceAlias)""
+                cmd.exe /c "netsh routing ip nat set interface "($interface_ext.InterfaceAlias)" mode=full"
+                cmd.exe /c "netsh routing ip nat add interface "($interface_dom1.InterfaceAlias)""
+                cmd.exe /c "netsh routing ip nat add interface "($interface_dom2.InterfaceAlias)""
+                
+            }
+        
+            #endregion
+
             #region: Server1
             $vmName = "Server1"
             $VM = (Get-VM -Name $vmName)
@@ -305,8 +336,6 @@ function Install-VMRoles {
             $VM = $null
             #endregion
 
-
-
             #region Member
             $vmName = "Member"
             $VM = (Get-VM -Name $vmName)
@@ -329,48 +358,20 @@ function Install-VMRoles {
             Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credServer -ScriptBlock {
                 
                 Add-WindowsFeature adcs-cert-authority -IncludeManagementTools
-                Install-AdcsCertificationAuthority -AllowAdministratorInteraction`
+                Install-AdcsCertificationAuthority -AllowAdministratorInteraction `
                 -CAType EnterpriseRootCa `
                 -CryptoProviderName "RSA#Microsoft Software Key Storage Provider" `
                 -KeyLength 2048 `
                 -HashAlgorithmName SHA256 `
                 -ValidityPeriod Years `
-                -ValidityPeriodUnits 3
+                -ValidityPeriodUnits 3 `
+                -Confirm
+                
             }
 
             #endregion
 
-            #region Router
 
-            $vmName = "Router"
-            $VM = (Get-VM -Name $vmName)
-            Write-Verbose "Starting configuration of $vmName"
-            
-            Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credServer -ScriptBlock {
-                
-                # Install router role
-                Install-WindowsFeature Routing -IncludeManagementTools
-                Install-RemoteAccess -VpnType Vpn
-                Write-Verbose "Router role installed"
-                # IP Configuration
-                $interface_ext = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000004"
-                $interface_dom1 = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000005"
-                $interface_dom2= Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000006"
-                New-NetIPAddress -IPAddress 10.0.1.1 -InterfaceAlias ($interface_dom1.InterfaceAlias) -PrefixLength 24 | Out-Null
-                Set-DnsClientServerAddress -InterfaceAlias ($interface_dom1.InterfaceAlias) -ServerAddresses 10.0.1.10 | Out-Null
-                New-NetIPAddress -IPAddress 10.0.2.1 -InterfaceAlias ($interface_dom2.InterfaceAlias) -PrefixLength 24 | Out-Null
-                Set-DnsClientServerAddress -InterfaceAlias ($interface_dom2.InterfaceAlias) -ServerAddresses 10.0.2.10 | Out-Null
-
-                
-                
-                
-                # Rename and Join PC to Domain
-                Add-Computer -domainname Domain1.local -Credential $args[0] -NewName $args[1] -Restart
-            }
-
-
-
-            #endregion
 
             #region: Klient1
 

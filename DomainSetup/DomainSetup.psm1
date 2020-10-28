@@ -290,9 +290,9 @@ function Install-VMRoles {
             Start-Sleep -Seconds 30
             Wait-ActiveDirectory
 
-            Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credDomain1 -ScriptBlock {
+            Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credDomain2 -ScriptBlock {
                 # Adds Conditional Forwarder for domain2
-                Add-DnsServerConditionalForwarderZone -Name Domain2.local -MasterServers 10.0.2.10
+                Add-DnsServerConditionalForwarderZone -Name Domain2.local -MasterServers 10.0.1.10
             }
             $vmName = $null
             $VM = $null

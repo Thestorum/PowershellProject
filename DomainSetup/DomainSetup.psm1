@@ -178,6 +178,7 @@ function Install-VirtualEnvironment {
         if ($startVMs = $true) {
             Write-Verbose "Starting VM's"
             Get-VM | Start-VM
+            Write-Verbose "VM's Successfully installed"
         
         }
 
@@ -220,9 +221,9 @@ function Install-VMRoles {
             Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credServer -ScriptBlock {
                 
                 # Install router role
-                #Install-WindowsFeature Routing -IncludeManagementTools
-                #Install-RemoteAccess -VpnType Vpn
-                #Write-Verbose "Router role installed"
+                Install-WindowsFeature Routing -IncludeManagementTools
+                Install-RemoteAccess -VpnType Vpn
+                Write-Verbose "Router role installed"
                 # IP Configuration
                 $interface_ext = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000004" | Select-Object -ExpandProperty InterfaceAlias
                 $interface_dom1 = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000005" | Select-Object -ExpandProperty InterfaceAlias
@@ -236,7 +237,7 @@ function Install-VMRoles {
                 Set-DnsClientServerAddress -InterfaceAlias $interface_dom2 -ServerAddresses 10.0.2.10 | Out-Null
         
                 cmd.exe /c "netsh routing ip nat install"
-                cmd.exe /c "netsh routing ip nat add interface"
+                cmd.exe /c "netsh routing ip nat add interface `"$interface_ext`""
                 cmd.exe /c "netsh routing ip nat set interface `"$interface_ext`" mode=full"
                 cmd.exe /c "netsh routing ip nat add interface `"$interface_dom1`""
                 cmd.exe /c "netsh routing ip nat add interface `"$interface_dom2`""
@@ -280,7 +281,7 @@ function Install-VMRoles {
             }
             Write-Verbose "$vmName is now rebooting"
             # Resumes when domain is reachable again
-            Start-Sleep -Seconds 30
+            Start-Sleep -Seconds 90
             Wait-ActiveDirectory -VirtualMachine $VM -Credential $credDomain1
 
             Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credDomain1 -ScriptBlock {
@@ -328,8 +329,8 @@ function Install-VMRoles {
             }
             Write-Verbose "$vmName is now rebooting"
             # Resumes when domain is reachable again
-            Start-Sleep -Seconds 30
-            Wait-ActiveDirectory
+            Start-Sleep -Seconds 90
+            Wait-ActiveDirectory -VirtualMachine $VM -Credential $credDomain2
 
             Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credDomain2 -ScriptBlock {
                 # Adds Conditional Forwarder for domain2
@@ -352,13 +353,14 @@ function Install-VMRoles {
                 Disable-NetAdapterBinding -InterfaceAlias ($interface.InterfaceAlias) -ComponentID ms_tcpip6 | Out-Null
                 
                 # Rename and Join PC to Domain
+                Start-Sleep -Seconds 30
                 Add-Computer -domainname Domain1.local -Credential $args[0] -NewName $args[1] -Restart
             }
 
             Write-Verbose "$vmName is now rebooting"
-            Start-Sleep -Seconds 30
-            Wait-ActiveDirectory -VirtualMachine $VM -Credential $credDomain1
-            Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credServer -ScriptBlock {
+            Start-Sleep -Seconds 90
+            #Wait-ActiveDirectory -VirtualMachine $VM -Credential $credDomain1
+            Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credDomain1 -ScriptBlock {
                 
                 Add-WindowsFeature adcs-cert-authority -IncludeManagementTools
                 Install-AdcsCertificationAuthority -AllowAdministratorInteraction `
@@ -368,7 +370,7 @@ function Install-VMRoles {
                 -HashAlgorithmName SHA256 `
                 -ValidityPeriod Years `
                 -ValidityPeriodUnits 3 `
-                -Confirm
+                -Force
                 
             }
 
@@ -394,6 +396,7 @@ function Install-VMRoles {
                 Disable-NetAdapterBinding -InterfaceAlias ($interface.InterfaceAlias) -ComponentID ms_tcpip6 | Out-Null
                 
                 # Rename and Join PC to Domain
+                Start-Sleep -Seconds 30
                 Add-Computer -domainname Domain1.local -Credential $args[0] -NewName $args[1] -Restart
             }
             
@@ -405,7 +408,7 @@ function Install-VMRoles {
             $VM = (Get-VM -Name $vmName)
             Write-Verbose "Starting configuration of $vmName"
             
-            Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credClient -ArgumentList $credDomain1,$vmName -ScriptBlock {
+            Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credClient -ArgumentList $credDomain2,$vmName -ScriptBlock {
                 $interface = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000008"
                 
                 # IP Configuration
@@ -414,6 +417,7 @@ function Install-VMRoles {
                 Disable-NetAdapterBinding -InterfaceAlias ($interface.InterfaceAlias) -ComponentID ms_tcpip6 | Out-Null
                 
                 # Rename and Join PC to Domain
+                Start-Sleep -Seconds 30
                 Add-Computer -domainname domain2.local -Credential $args[0] -NewName $args[1] -Restart
             }
             

@@ -220,13 +220,13 @@ function Install-VMRoles {
             Invoke-CommandWithPSDirect -VirtualMachine $VM -Credential $credServer -ScriptBlock {
                 
                 # Install router role
-                Install-WindowsFeature Routing -IncludeManagementTools
-                Install-RemoteAccess -VpnType Vpn
-                Write-Verbose "Router role installed"
+                #Install-WindowsFeature Routing -IncludeManagementTools
+                #Install-RemoteAccess -VpnType Vpn
+                #Write-Verbose "Router role installed"
                 # IP Configuration
-                $interface_ext = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000004" | Select-Object -Property InterfaceAlias
-                $interface_dom1 = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000005" | Select-Object -Property InterfaceAlias
-                $interface_dom2= Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000006" | Select-Object -Property InterfaceAlias
+                $interface_ext = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000004" | Select-Object -ExpandProperty InterfaceAlias
+                $interface_dom1 = Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000005" | Select-Object -ExpandProperty InterfaceAlias
+                $interface_dom2= Get-NetAdapter | Where-Object PermanentAddress -EQ "00155D000006" | Select-Object -Expandproperty InterfaceAlias
                 
 
 
@@ -236,14 +236,10 @@ function Install-VMRoles {
                 Set-DnsClientServerAddress -InterfaceAlias $interface_dom2 -ServerAddresses 10.0.2.10 | Out-Null
         
                 cmd.exe /c "netsh routing ip nat install"
-                cmd.exe /c "netsh routing ip nat add interface 
-                
-                
-                
-                "
-                cmd.exe /c "netsh routing ip nat set interface "($interface_ext.InterfaceAlias)" mode=full"
-                cmd.exe /c "netsh routing ip nat add interface "($interface_dom1.InterfaceAlias)""
-                cmd.exe /c "netsh routing ip nat add interface "($interface_dom2.InterfaceAlias)""
+                cmd.exe /c "netsh routing ip nat add interface"
+                cmd.exe /c "netsh routing ip nat set interface `"$interface_ext`" mode=full"
+                cmd.exe /c "netsh routing ip nat add interface `"$interface_dom1`""
+                cmd.exe /c "netsh routing ip nat add interface `"$interface_dom2`""
                 
             }
         
